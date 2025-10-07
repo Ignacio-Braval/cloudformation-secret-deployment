@@ -1,0 +1,89 @@
+Parameters:
+  CentroCosto:
+    NoEcho: true
+    Description: Centro de costos que paga el consumo de este componente
+    Type: String
+    AllowedPattern: "[a-zA-Z0-9]*"
+    ConstraintDescription: Must contain only alphanumeric characters.
+    Default: "<centro_costo>"
+
+  NombreProyecto:
+    NoEcho: true
+    Description: Nombre del proyecto
+    Type: String
+    Default: "<nombre_proyecto>"
+
+  Ambiente:
+    NoEcho: true
+    Description: Ambiente de despliegue (ej: dev, qa, prod)
+    Type: String
+    Default: "<ambiente>"
+
+  idAplicativo:
+    NoEcho: true
+    Description: Identificador del aplicativo
+    Type: String
+    Default: "<id_aplicativo>"
+
+  responsable:
+    NoEcho: true
+    Description: Responsable del proyecto
+    Type: String
+    Default: "<responsable>"
+
+  lineanegocio:
+    NoEcho: true
+    Description: Linea de negocio
+    Type: String
+    Default: "<linea_negocio>"
+
+  ################################################################################
+  ROLEARN:
+    Type: String
+    Description: "ARN del role de la cuenta Security para SecretManager (sin exponer el real)"
+    Default: "arn:aws:iam::<ACCOUNT_ID>:role/<ROLE_NAME>"
+
+  jsonSecret:
+    Type: String
+    NoEcho: true
+    ConstraintDescription: "Debe estar en formato JSON válido"
+    Description: "Ingrese el secreto en formato JSON (no incluir valores reales en GitHub)"
+    Default: "{}"
+##################################################################################
+
+Resources:
+  SecretBD:
+    Type: "AWS::SecretsManager::Secret"
+    Properties:
+      Name: db/<proyecto>/<usuario>/<ambiente>
+      Description: "Secretos para acceso a la base de datos del proyecto"
+      KmsKeyId: arn:aws:kms:us-east-1:<ACCOUNT_ID>:key/<KMS_KEY_ID>
+      SecretString: !Ref jsonSecret
+      Tags:
+        - Key: cc
+          Value: !Ref CentroCosto
+        - Key: proyecto
+          Value: !Ref NombreProyecto
+        - Key: ambiente
+          Value: !Ref Ambiente
+        - Key: idAplicativo
+          Value: !Ref idAplicativo
+        - Key: responsable
+          Value: !Ref responsable
+        - Key: lineaNegocio
+          Value: !Ref lineanegocio
+
+  MySecretResourcePolicy:
+    Type: AWS::SecretsManager::ResourcePolicy
+    Properties:
+      BlockPublicPolicy: True
+      SecretId: !Ref SecretBD
+      ResourcePolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Resource: "*"
+            Action: secretsmanager:GetSecretValue
+            Effect: Allow
+            Principal:
+              AWS:
+                - !Ref ROLEARN
